@@ -4,10 +4,9 @@ library(tidyverse)
 library(Seurat)
 
 sample = "chromium0XX"
-
-
 seuratobj = readRDS(paste("Data/SeuratRDS/", sample, "_PC10_res0.5.rds", sep = ""))
 
+## Convert SeuratObject to cds
 ToMonocle3 <- function(seurat_object,
                        scale_all = FALSE,
                        assay = "SCT",
@@ -83,11 +82,12 @@ ToMonocle3 <- function(seurat_object,
   new_cds
 }
 
+## Make the CDS object
 cds = ToMonocle3(seuratobj, scale_all = TRUE, assay = "RNA", reduction_for_projection = "pca", UMAP_cluster_slot = NULL)
 
+## pseudotime
 cds <- learn_graph(cds)
 cds <- order_cells(cds, reduction_method = "UMAP")
-
 plot_cells(
   cds = cds,
   color_cells_by = "pseudotime",
