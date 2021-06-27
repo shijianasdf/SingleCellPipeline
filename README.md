@@ -1,2 +1,2 @@
 # SNU_SingleCell_Immune
-Single Cell Analysis of Immune cells
+Single Cell RNA-Seq Analysis of Immune cells
