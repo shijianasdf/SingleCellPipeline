@@ -1,4 +1,4 @@
-# SNU_SingleCell_Immune
+# SNU_scRNA_Immune
 Single Cell RNA-Seq Analysis of Immune cells
 
 1. CellRanger
