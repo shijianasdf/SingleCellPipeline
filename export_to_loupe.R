@@ -12,10 +12,7 @@ tsne_sc1 = cbind("Barcode" = rownames(Embeddings(object = sc1, reduction = "tsne
 #write.table(tsne_sc1, file="./Data/Harmony_cluster_0to16_per100_with_naive_0406.for_loupe.csv", sep = ",", quote = F, row.names = F, col.names = T)
 
 
-
-
 ## Seurat clusters
-
 helpless <- readRDS("Data/SeuratRDS/chromium033_PC10_res0.5.rds")
 
 # Embeddings information - UMAP Plotting
