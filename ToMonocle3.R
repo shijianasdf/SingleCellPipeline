@@ -2,7 +2,12 @@ library(monocle3)
 library(dplyr)
 library(tidyverse)
 library(Seurat)
+library(cowplot)
 library(SingleCellExperiment)
+
+
+###############################################################################################################
+## Trajectory on UMAP
 
 sample = "chromium040"
 seuratobj = readRDS(paste("Data/SeuratRDS/", sample, "_PC10_res0.5.rds", sep = ""))
@@ -106,10 +111,10 @@ plot_cells(
 
 
 
-######################################3
+######################################
 ## Harmony - with naive. UMAP
 
-harmonyobj = readRDS("Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0630.rds")
+harmonyobj = readRDS("Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0703.rds")
 
 ToMonocle3 <- function(seurat_object,
                        scale_all = FALSE,
@@ -204,11 +209,158 @@ get_earliest_principal_node <- function(cds, seurat_cluster){
 }
 
 #cds <- order_cells(cds, reduction_method = "UMAP", root_pr_nodes=get_earliest_principal_node(cds, seurat_cluster = 5))
-cds <- order_cells(cds, reduction_method = "UMAP")
+#cds <- order_cells(cds, reduction_method = "UMAP")
+cds <- order_cells(cds, reduction_method = "UMAP", root_pr_nodes=get_earliest_principal_node(cds, seurat_cluster = 5))
+cds <- order_cells(cds, reduction_method = "UMAP", root_pr_nodes=c(get_earliest_principal_node(cds, seurat_cluster = 5), get_earliest_principal_node(cds, seurat_cluster = 4)))
 
-
-plot_cells(
+p <- plot_cells(
   cds = cds,
   color_cells_by = "pseudotime",
   show_trajectory_graph = TRUE
 )
+
+save_plot('~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/Figures/plot.Monocle_UMAP.harmony_cluster4&5_0706.png', p, base_height = 6, base_width = 7)
+
+
+################################################################
+## Harmony - divide coghelp vs naive
+
+harmony_cog <- subset(x = harmonyobj, subset = orig.ident == "chromium034")
+harmony_naive <- subset(x = harmonyobj, subset = orig.ident == "chromium040")
+
+cds_cog = ToMonocle3(harmony_cog, scale_all = TRUE, assay = "RNA", reduction_for_projection = "pca", UMAP_cluster_slot = NULL)
+cds_cog <- learn_graph(cds_cog)
+cds_cog <- order_cells(cds_cog, reduction_method = "UMAP", root_pr_nodes=get_earliest_principal_node(cds_cog, seurat_cluster = 5))
+
+p1 <- plot_cells(
+  cds = cds_cog,
+  color_cells_by = "pseudotime",
+  show_trajectory_graph = TRUE
+)
+
+cds_naive = ToMonocle3(harmony_naive, scale_all = TRUE, assay = "RNA", reduction_for_projection = "pca", UMAP_cluster_slot = NULL)
+cds_naive <- learn_graph(cds_naive)
+cds_naive <- order_cells(cds_naive, reduction_method = "UMAP", root_pr_nodes= get_earliest_principal_node(cds_naive, seurat_cluster = 5))
+
+p2 <- plot_cells(
+  cds = cds_naive,
+  color_cells_by = "pseudotime",
+  show_trajectory_graph = TRUE
+)
+
+p = plot_grid(p1, p2)
+save_plot('~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/Figures/plot.Monocle_UMAP.harmony_split_cluster5_0706.png', p, base_height = 6, base_width = 14)
+
+
+###############################################################################################################
+## Branch-like
+
+harmonyobj = readRDS("Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0703.rds")
+
+expression_matrix <- harmonyobj@assays$RNA@counts %>% as.matrix()
+cell_metadata = harmonyobj@meta.data
+cell_metadata <- cbind(cell_metadata, harmonyobj[["umap"]]@cell.embeddings)
+gene_annotation = data.frame(gene_short_name=rownames(expression_matrix))
+rownames(gene_annotation) = gene_annotation$gene_short_name
+
+# Make the CDS object
+cds <- new_cell_data_set(expression_matrix,
+                         cell_metadata = cell_metadata,
+                         gene_metadata = gene_annotation)
+
+
+# Pre-process the data
+cds <- preprocess_cds(cds, num_dim = 10) 
+
+# Reduce dimensionality 
+cds <- reduce_dimension(cds, reduction_method = "UMAP")
+
+# Clustering
+cds = cluster_cells(cds, reduction_method = "UMAP", resolution=0.7)
+p = plot_cells(cds, group_cells_by="cluster", color_cells_by = 'seurat_clusters', reduction_method = 'UMAP', label_cell_groups = T)
+p
+
+##pseudotime
+cds <- learn_graph(cds)
+cds <- order_cells(cds, reduction_method = "UMAP", root_pr_nodes= get_earliest_principal_node(cds, seurat_cluster = 5))
+
+p = plot_cells(cds,
+               color_cells_by = "seurat_clusters",
+               label_groups_by_cluster=T,
+               label_leaves=T,
+               label_branch_points=T, group_cells_by = 'cluster', show_trajectory_graph = T, label_cell_groups = F)
+
+p
+ggsave(paste('Figures/plot.', tag, '_pseudotime.before.', date, '.png', sep = ''), p, 
+       height = 4, width = 6, limitsize = F)
+cds <- order_cells(cds)
+p = plot_cells(cds,
+               color_cells_by = "pseudotime",
+               label_cell_groups=T,
+               label_leaves=T,
+               label_branch_points=T,
+               graph_label_size=1.5, label_groups_by_cluster=T)
+p
+ggsave(paste('Figures/plot.', tag, '_pseudotime.after.', date, '.png', sep = ''), p, 
+       height = 4, width = 6, limitsize = F)
+
+
+reducedDims(cds)$UMAP[,1] <- cell_metadata$UMAP_1
+reducedDims(cds)$UMAP[,2] <- cell_metadata$UMAP_2
+
+
+
+
+
+p<-plot_cells(cds, reduction_method = "UMAP",
+              color_cells_by = "seurat_clusters", group_label_size = 3.5,
+              label_groups_by_cluster = F, label_cell_groups = T)
+p
+ggsave(paste('Figures/plot.', tag, '_pseudotime_UMAP.before.', date, '.png', sep = ''), p, 
+       height = 5, width = 6, limitsize = F)
+cds <- order_cells(cds)
+p<-plot_cells(cds, 
+              color_cells_by = "pseudotime", group_label_size = 3.5,
+              label_groups_by_cluster = FALSE)
+p
+ggsave(paste('Figures/plot.', tag, '_pseudotime_UMAP.after.', date, '.png', sep = ''), p, 
+       height = 5, width = 7, limitsize = F)
+
+
+
+####
+
+
+cds <- learn_graph(cds)
+p = plot_cells(cds,
+               color_cells_by = "assigned_cell_type",
+               label_groups_by_cluster=FALSE,
+               label_leaves=FALSE,
+               label_branch_points=FALSE)
+p
+ggsave(paste('Figures/gRNA/plot.pseudotime.before', names(cds_list)[k], date, 'png', sep = '.'), p, 
+       height = 4, width = 6, limitsize = F)
+cds <- order_cells(cds)
+p = plot_cells(cds,
+               color_cells_by = "pseudotime",
+               label_cell_groups=FALSE,
+               label_leaves=FALSE,
+               label_branch_points=FALSE,
+               graph_label_size=1.5)
+p
+ggsave(paste('Figures/gRNA/plot.pseudotime.after', names(cds_list)[k], date, 'png', sep = '.'), p, 
+       height = 4, width = 6, limitsize = F)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
