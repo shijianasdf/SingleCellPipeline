@@ -7,12 +7,55 @@ library(Seurat)
 setwd("~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/")
 
 ## Harmony with naive
-sc1 <- readRDS('Data/Harmony_cluster_0to16_per100_with_naive_0406.rds')
+sc1 <- readRDS('Data/Harmony_cluster_0to16_per100_with_naive_0406.rds') # tsne mapping
+sc2 <- readRDS('Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0714.rds') # umap
 tsne_sc1 = cbind("Barcode" = rownames(Embeddings(object = sc1, reduction = "tsne")), Embeddings(object = sc1, reduction = "tsne"))
 #write.table(tsne_sc1, file="./Data/Harmony_cluster_0to16_per100_with_naive_0406.for_loupe.csv", sep = ",", quote = F, row.names = F, col.names = T)
 
+umap_harmony = cbind("Barcode" = rownames(Embeddings(object = sc2, reduction = "umap")), Embeddings(object = sc2, reduction = "umap"))
+write.table(umap_harmony, file="Data/harmony_umap_0714.for_loupe.csv", sep = ",", quote = F, row.names = F, col.names = T)
+d = read.table("Data/harmony_umap_0714.for_loupe.csv", sep = ",")
+colnames(d) = d[1,]
+d = d[2:nrow(d),]
+rownames(d) <- 1:nrow(d)
+
+library(stringr)
+Barcode_m = as.data.frame(str_split_fixed(d$Barcode, "_", 2))
+Barcode_m$sample <- ifelse(Barcode_m$V1 == "chromium033", 1, 
+                           ifelse(Barcode_m$V1 == "chromium034", 2, 
+                                 ifelse(Barcode_m$V1 == "chromium035", 3,
+                                       ifelse(Barcode_m$V1 == "chromium040", 4, NA))))
+
+Barcode_m$barcode <- sapply(strsplit(as.character(Barcode_m$V2),'-'), "[", 1)
+Barcode_m$barcode = paste(Barcode_m$barcode, Barcode_m$sample, sep = "-")
+
+df = cbind.data.frame(d, Barcode_m[,4])
+df = df[,c(4,2,3)]
+colnames(df) = c("Barcode","UMAP_1","UMAP_2")
+write.table(df, file="Data/harmony_umap_0715.modified.for_loupe.csv", sep = ",", quote = F, row.names = F, col.names = T)
+
+dc = data.frame()
+for (i in 0:16){
+  dc_tmp = as.data.frame(WhichCells(sc2, idents = i))
+  colnames(dc_tmp) = "barcode"
+  dc_tmp$id = paste("Cluster", i, sep = " ")
+  dc = rbind.data.frame(dc, dc_tmp)
+}
+Barcode_m = as.data.frame(str_split_fixed(dc$barcode, "_", 2))
+Barcode_m$sample <- ifelse(Barcode_m$V1 == "chromium033", 1, 
+                           ifelse(Barcode_m$V1 == "chromium034", 2, 
+                                  ifelse(Barcode_m$V1 == "chromium035", 3,
+                                         ifelse(Barcode_m$V1 == "chromium040", 4, NA))))
+
+Barcode_m$barcode <- sapply(strsplit(as.character(Barcode_m$V2),'-'), "[", 1)
+Barcode_m$barcode = paste(Barcode_m$barcode, Barcode_m$sample, sep = "-")
+dc$barcode <- Barcode_m$barcode
+write.csv(dc, file = "./Data/harmony_umap_0715.cluster_annotation.csv", row.names = F)
+
+
 
 ## Seurat clusters
+
 helpless <- readRDS("Data/SeuratRDS/chromium033_PC10_res0.5.rds")
 
 # Embeddings information - UMAP Plotting
