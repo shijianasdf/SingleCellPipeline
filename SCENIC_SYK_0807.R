@@ -1,8 +1,10 @@
 options(stringsAsFactors = F)
-library(SCENIC)
+library(tidyverse)
+library(dplyr)
+library(SCENIC) 
 library(AUCell)
 library(RcisTarget)
-# library(SCopeLoomR)
+library(SCopeLoomR) # install.packages("hdf5r", configure.args = c("--with-hdf5=/opt/homebrew/Cellar/hdf5/1.12.1/bin/h5cc"))
 library(KernSmooth)
 library(BiocParallel)
 library(ggplot2)
@@ -10,37 +12,40 @@ library(data.table) ## may need re download.
 library(grid)
 library(ComplexHeatmap)
 library(SingleCellExperiment)
+library(Seurat)
+options(timeout = max(3000, getOption("timeout"))) ## download.file timeout
 
 ### Species-specific database
 dbFiles <- c("https://resources.aertslab.org/cistarget/databases/mus_musculus/mm9/refseq_r45/mc9nr/gene_based/mm9-500bp-upstream-7species.mc9nr.feather",
              "https://resources.aertslab.org/cistarget/databases/mus_musculus/mm9/refseq_r45/mc9nr/gene_based/mm9-tss-centered-10kb-7species.mc9nr.feather")
 # mc9nr: Motif collection version 9: 24k motifs
 
+for(featherURL in dbFiles){
+  download.file(featherURL, destfile=basename(featherURL)) # saved in current dir
+}
 
-######################### HARMONY #########################
+##################### HARMONY #########################
 ## Get data from sce object:
-exprMat <- counts(sce)
-cellInfo <- colData(sce)
-cellInfo <- data.frame(seuratCluster=Idents(seuratObject))
+sce = readRDS("Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0714.rds")
+exprMatrix <- sce@assays$RNA@counts %>% as.matrix()
+cellInfo <- data.frame(seuratCluster=Idents(sce))
 
 ## Saving into loom
-setwd("SCENIC_MouseBrain")
-dir.create("data")
-loom <- build_loom("data/mouseBrain.loom", dgem=exprMatrix)
+setwd("/Users/ssun1116/Dropbox/NGR_SNU_2019/scRNA_seq_SYK")
+#dir.create("Data/SCENIC_loom.data")
+loom <- build_loom("Data/SCENIC_loom.data/Harmony_0813.loom", dgem=exprMatrix)
 loom <- add_cell_annotation(loom, cellInfo)
 close_loom(loom)
 
 ### Load data
-loomPath <- system.file(package="SCENIC", "examples/mouseBrain_toy.loom")
-library(SCopeLoomR)
+loomPath = "Data/SCENIC_loom.data/Harmony_0813.loom"
 loom <- open_loom(loomPath)
 exprMat <- get_dgem(loom)
 cellInfo <- get_cell_annotation(loom)
 close_loom(loom)
-saveRDS(cellInfo, file=getDatasetInfo(scenicOptions, "cellInfo"))
+#saveRDS(cellInfo, file=getDatasetInfo(scenicOptions, "cellInfo"))
 
 ### Initialize settings
-library(SCENIC)
 scenicOptions <- initializeScenic(org="mgi", dbDir="Resources", nCores=10)
 # scenicOptions@inputDatasetInfo$cellInfo <- "int/cellInfo.Rds"
 saveRDS(scenicOptions, file="int/scenicOptions.Rds") 
