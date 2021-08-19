@@ -114,7 +114,7 @@ plot_cells(
 ######################################
 ## Harmony - with naive. UMAP
 
-harmonyobj = readRDS("Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0703.rds")
+harmonyobj = readRDS("Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0714.rds")
 
 ToMonocle3 <- function(seurat_object,
                        scale_all = FALSE,
@@ -219,13 +219,15 @@ p <- plot_cells(
   show_trajectory_graph = TRUE
 )
 
-save_plot('~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/Figures/plot.Monocle_UMAP.harmony_cluster4&5_0706.png', p, base_height = 6, base_width = 7)
+save_plot('~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/Figures/plot.Monocle_UMAP.harmony_cluster5_0718.png', p, base_height = 6, base_width = 7)
 
 
 ################################################################
 ## Harmony - divide coghelp vs naive
 
 harmony_cog <- subset(x = harmonyobj, subset = orig.ident == "chromium034")
+harmony_sep <- subset(x = harmonyobj, subset = orig.ident == "chromium035")
+harmony_less <- subset(x = harmonyobj, subset = orig.ident == "chromium033")
 harmony_naive <- subset(x = harmonyobj, subset = orig.ident == "chromium040")
 
 cds_cog = ToMonocle3(harmony_cog, scale_all = TRUE, assay = "RNA", reduction_for_projection = "pca", UMAP_cluster_slot = NULL)
@@ -249,7 +251,31 @@ p2 <- plot_cells(
 )
 
 p = plot_grid(p1, p2)
-save_plot('~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/Figures/plot.Monocle_UMAP.harmony_split_cluster5_0706.png', p, base_height = 6, base_width = 14)
+save_plot('~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/Figures/plot.Monocle_UMAP.harmony_split_cluster5_0718.png', p, base_height = 6, base_width = 14)
+
+
+cds_less = ToMonocle3(harmony_less, scale_all = TRUE, assay = "RNA", reduction_for_projection = "pca", UMAP_cluster_slot = NULL)
+cds_less <- learn_graph(cds_less)
+cds_less <- order_cells(cds_less, reduction_method = "UMAP", root_pr_nodes=get_earliest_principal_node(cds_less, seurat_cluster = 5))
+
+p1 <- plot_cells(
+  cds = cds_less,
+  color_cells_by = "pseudotime",
+  show_trajectory_graph = TRUE
+)
+
+cds_sep = ToMonocle3(harmony_sep, scale_all = TRUE, assay = "RNA", reduction_for_projection = "pca", UMAP_cluster_slot = NULL)
+cds_sep <- learn_graph(cds_sep)
+cds_sep <- order_cells(cds_sep, reduction_method = "UMAP", root_pr_nodes= get_earliest_principal_node(cds_sep, seurat_cluster = 5))
+
+p2 <- plot_cells(
+  cds = cds_sep,
+  color_cells_by = "pseudotime",
+  show_trajectory_graph = TRUE
+)
+
+p = plot_grid(p1, p2)
+save_plot('~/Dropbox/NGR_SNU_2019/scRNA_seq_SYK/Figures/plot.Monocle_UMAP.harmony_split_helpless&sep_0718.png', p, base_height = 6, base_width = 14)
 
 
 ###############################################################################################################

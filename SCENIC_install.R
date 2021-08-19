@@ -24,3 +24,5 @@ BiocManager::install(c("doMC", "doRNG"), force = TRUE)
 if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
 devtools::install_github("aertslab/SCENIC") 
 packageVersion("SCENIC") # 1.2.4
+
+#install.packages(c("jsonlite", "evaluate"))

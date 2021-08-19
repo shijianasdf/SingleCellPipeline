@@ -153,20 +153,20 @@ ElbowPlot(coghelp) # alternative heuristic method of determining dimensionality.
 ########## PC 10 ##########
 ## Cluster the cells 
 coghelp <- FindNeighbors(coghelp, dims = 1:10)
-coghelp <- FindClusters(coghelp, resolution = 0.5) ## increased values -> greater number of clusters
+coghelp <- FindClusters(coghelp, resolution = 1.0) ## increased values -> greater number of clusters
 
 ## Run non-linear dimensional reduction (UMAP/tSNE)
 coghelp <- RunUMAP(coghelp, dims = 1:10)
 p <- DimPlot(coghelp, reduction = "umap", label = T, label.size = 5)
-saveRDS(coghelp, file = "Data/SeuratRDS/chromium034_PC10_res0.5.rds")
-save_plot(paste('Figures/plot_umap', 'PC10', 'coghelp', 'png', sep='.'), p, base_height = 5, base_width = 6)
+saveRDS(coghelp, file = "Data/SeuratRDS/chromium034_PC10_res1.0.rds")
+save_plot(paste('Figures/plot_umap', 'PC10', 'coghelp', 'res1.0', 'png', sep='.'), p, base_height = 5, base_width = 6)
 
 # find markers for every cluster compared to all remaining cells, report only the positive ones
 coghelp.markers <- FindAllMarkers(coghelp, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-write.table(coghelp.markers, paste('Tables/MarkerGenes_Seurat/table.FindAllMarkers', 'PC10', 'coghelp', 'txt', sep='.'), 
+write.table(coghelp.markers, paste('Tables/MarkerGenes_Seurat/table.FindAllMarkers', 'PC10', 'coghelp', 'res1.0', 'txt', sep='.'), 
             sep='\t', quote = F, row.names = F, col.names = T)
 t2 = coghelp.markers %>% group_by(cluster) %>% top_n(n = 3, wt = avg_log2FC)
-write.table(t2, paste('Tables/MarkerGenes_Seurat/table.Top15FindAllMarkers', 'PC10', 'coghelp', 'txt', sep='.'), 
+write.table(t2, paste('Tables/MarkerGenes_Seurat/table.Top15FindAllMarkers', 'PC10', 'coghelp', 'res1.0', 'txt', sep='.'), 
             sep='\t', quote = F, row.names = F, col.names = T)
 
 
