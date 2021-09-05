@@ -1,6 +1,5 @@
 # SNU_scRNA_Immune
-Single Cell RNA-Seq Analysis of Immune cells
-
+Organize the workflow of Myeloid cell single cell rna-seq analysis. 
 1. CellRanger
 2. Seurat
 3. Harmony
