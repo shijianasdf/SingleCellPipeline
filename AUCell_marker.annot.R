@@ -203,7 +203,6 @@ for(geneSetName in names(selectedThresholds)){
 }
 
 
-<<<<<<< HEAD
 ## AUCell analysis 3 - DC reference gene list
 
 rm(list = ls())
@@ -384,10 +383,77 @@ for(geneSetName in names(selectedThresholds)){
   dev.off()
 }
 
-=======
->>>>>>> ea7b1af9f49dfc9710587de3b4a28dde84e76480
 
 
+## AUCell analysis 4 - Lin paper Seurat Marker gene list
+
+# Convert the expression data from Seurat object into a matrix data structure
+harmony = readRDS("Data/UMAP.Harmony_cluster_0to16_per100_with_naive_0714.rds")
+exprMatrix <- as.matrix(Seurat::GetAssayData(harmony))
+
+# Load Geneset
+lin.marker = as.data.frame(read_excel("../Resources/References/Lin.et.al_2021_markergenes.xlsx"))
+geneSets = GeneSet()
+for (clusters in unique(lin.marker$cluster)){
+  genes <- lin.marker %>% filter(cluster == clusters) %>% pull(gene)
+  geneSets <- c(geneSets, GeneSet(genes, setName=paste("cluster", clusters, sep = "_")))
+}
+geneSets <- GeneSetCollection(geneSets)
+names <- names(geneSets)
+names = names[2:8]
+geneSets = geneSets[names]
+geneSets <- subsetGeneSets(geneSets, rownames(exprMatrix)) 
+cbind(nGenes(geneSets))
+
+
+# 1. Build gene-expression rankings for each cell
+cells_rankings <- AUCell_buildRankings(exprMatrix)
+#save(cells_rankings, file="cells_rankings.RData")
+#cells_rankings = load("cells_rankings.RData")
+
+# 2. Calculate enrichment for the gene signatures (AUC)
+cells_AUC <- AUCell_calcAUC(geneSets, cells_rankings)
+save(cells_AUC, file="cells_AUC.LinPaper.RData")
+#cells_AUC = load("cells_AUC.RData")
+
+# 3. Determine the cells with the given gene signatures or active gene sets
+set.seed(123)
+par(mfrow=c(3,3)) 
+cells_assignment <- AUCell_exploreThresholds(cells_AUC, plotHist=TRUE, assign=TRUE) 
+
+cellsAssigned <- lapply(cells_assignment, function(x) x$assignment)
+assignmentTable <- reshape2::melt(cellsAssigned, value.name="cell")
+colnames(assignmentTable)[2] <- "geneSet"
+head(assignmentTable)
+
+DimPlot(harmony, reduction = "umap", label = TRUE, pt.size = .1)
+har.umap = harmony@reductions$umap@cell.embeddings
+plot(har.umap, pch = 16, cex = .3)
+
+selectedThresholds <- getThresholdSelected(cells_assignment)
+for(geneSetName in names(selectedThresholds)){
+  pdf(file = paste("UMAP.plot.", geneSetName, "_AUC.scored.Harmony.LinPaper.0915.pdf", sep = ""), width = 8, height = 8)
+  nBreaks <- 5 # Number of levels in the color palettes
+  # Color palette for the cells that do not pass the threshold
+  colorPal_Neg <- grDevices::colorRampPalette(c("black","blue", "skyblue"))(nBreaks)
+  # Color palette for the cells that pass the threshold
+  colorPal_Pos <- grDevices::colorRampPalette(c("pink", "magenta", "red"))(nBreaks)
+  
+  # Split cells according to their AUC value for the gene set
+  passThreshold <- getAUC(cells_AUC)[geneSetName,] >  selectedThresholds[geneSetName]
+  if(sum(passThreshold) >0){
+    aucSplit <- split(getAUC(cells_AUC)[geneSetName,], passThreshold)
+    
+    # Assign cell color
+    cellColor <- c(setNames(colorPal_Neg[cut(aucSplit[[1]], breaks=nBreaks)], names(aucSplit[[1]])), 
+                   setNames(colorPal_Pos[cut(aucSplit[[2]], breaks=nBreaks)], names(aucSplit[[2]])))
+    # Plot
+    plot(har.umap, main=geneSetName,
+         sub="Pink/red cells pass the threshold",
+         col=cellColor[rownames(har.umap)], pch=16) 
+  }
+  dev.off()
+}
 
 
 
